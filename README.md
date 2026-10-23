@@ -33,6 +33,7 @@ it, so **nothing can be posted until this step is done.**
    npx supabase login
    npx supabase link --project-ref <your-project-ref>
    npx supabase functions deploy screen
+   npx supabase functions deploy songs
    npx supabase secrets set ANTHROPIC_API_KEY=<your-key>
    ```
 
@@ -92,5 +93,5 @@ node --test tests/*.test.mjs      # app logic and the screening module
 - [x] **Phase 4** — safety: AI screening, crisis mode, reports, penalties, appeals
 - [x] **Phase 5** — buddies & push notifications (including the next-day check-in)
 - [x] **Phase 6** — photos on Corner posts (screened, location data stripped)
-- [ ] Phase 7 — song posts
+- [x] **Phase 7** — song posts (Apple catalog metadata; no audio or lyrics)
 - [ ] Phase 8 — beta → App Store

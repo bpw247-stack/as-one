@@ -95,3 +95,9 @@ test('photos are sent as images ahead of the text', async () => {
   assert.deepEqual(content[0].source, { type: 'base64', media_type: 'image/jpeg', data: 'AAAA' });
   assert.match(content[2].text, /2 photo\(s\)/);
 });
+
+test('song posts are screened with the song as context', async () => {
+  const client = fakeClient(answer({ verdict: 'allow', category: 'none' }));
+  await screen(client, { kind: 'post', postKind: 'song', text: 'This one saved me.', song: { title: 'Lean on Me', artist: 'Bill Withers' } });
+  assert.match(client.calls[0].messages[0].content.at(-1).text, /about the song "Lean on Me" by Bill Withers/);
+});

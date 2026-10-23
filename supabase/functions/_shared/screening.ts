@@ -31,7 +31,13 @@ export type ScreeningResult =
 
 export type ScreeningInput =
   /** `images` are base64 JPEGs, already stripped of metadata. */
-  | { kind: 'post'; postKind: string; text: string; images?: string[] }
+  | {
+      kind: 'post';
+      postKind: string;
+      text: string;
+      images?: string[];
+      song?: { title: string; artist: string };
+    }
   | { kind: 'comment'; text: string; postExcerpt: string }
   | { kind: 'profile'; displayName: string; bio: string };
 
@@ -67,7 +73,7 @@ const OUTPUT_SCHEMA = {
 function describe(input: ScreeningInput): string {
   switch (input.kind) {
     case 'post':
-      return `A ${input.postKind.replace('_', ' ')} post${input.images?.length ? ` with ${input.images.length} photo(s) above` : ''}:\n<content>\n${input.text}\n</content>`;
+      return `A ${input.postKind.replace('_', ' ')} post${input.images?.length ? ` with ${input.images.length} photo(s) above` : ''}${input.song ? ` about the song "${input.song.title}" by ${input.song.artist}` : ''}:\n<content>\n${input.text}\n</content>`;
     case 'comment':
       return `A comment on someone's post. The post, for context only (it was already screened):\n<post>\n${input.postExcerpt}\n</post>\n\nThe comment to screen:\n<content>\n${input.text}\n</content>`;
     case 'profile':

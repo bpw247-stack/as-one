@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { PostPhotos } from '@/components/post-photos';
+import { SongCard } from '@/components/song-card';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -83,6 +84,15 @@ export function PostCard({
           <ThemedText type="small" themeColor="textSecondary">
             Follow-up to “{post.follow_up_excerpt}”
           </ThemedText>
+        ) : null}
+
+        {post.song_title ? (
+          <SongCard
+            title={post.song_title}
+            artist={post.song_artist ?? ''}
+            artworkUrl={post.song_artwork_url}
+            url={post.song_url}
+          />
         ) : null}
 
         <ThemedText>{post.body}</ThemedText>

@@ -43,6 +43,7 @@ export function publishPost(
     crisisAcknowledged?: boolean;
     notifyBuddies?: boolean;
     photos?: string[];
+    songId?: string;
   } = {},
 ) {
   return invoke({
@@ -57,6 +58,7 @@ export function publishPost(
     crisis_acknowledged: options.crisisAcknowledged ?? false,
     notify_buddies: options.notifyBuddies ?? false,
     photos: options.photos ?? [],
+    song_id: options.songId,
   });
 }
 

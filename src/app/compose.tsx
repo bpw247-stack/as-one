@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { CrisisInterstitial } from '@/components/crisis-support';
+import { SongPicker } from '@/components/song-picker';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Field, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -19,6 +20,7 @@ import {
 import { useUserId } from '@/lib/auth';
 import { MAX_PHOTOS, pickPhotos, uploadPending } from '@/lib/photos';
 import { problemWith, publishPost } from '@/lib/publish';
+import type { Song } from '@/lib/songs';
 
 export default function ComposeScreen() {
   const params = useLocalSearchParams<{
@@ -30,6 +32,7 @@ export default function ComposeScreen() {
   const [kind, setKind] = useState<PostKind>(followUpOf ? 'milestone' : 'struggle');
   const [commentsPrivate, setCommentsPrivate] = useState(false);
   const [notifyBuddies, setNotifyBuddies] = useState(false);
+  const [song, setSong] = useState<Song | null>(null);
   const myId = useUserId();
   // Local photos, and their uploaded paths once sent (kept if a crisis check holds the post).
   const [photos, setPhotos] = useState<string[]>([]);
@@ -84,6 +87,7 @@ export default function ComposeScreen() {
       const photoPaths = photosAllowed ? await uploadAll() : [];
       const result = await publishPost(kind, body.trim(), audience, {
         photos: photoPaths,
+        songId: kind === 'song' ? song?.id : undefined,
         commentsPrivate,
         followUpOf,
         crisisAcknowledged,
@@ -137,6 +141,8 @@ export default function ComposeScreen() {
       <ThemedText type="smallBold">{followUpOf ? 'What’s the update?' : 'What kind of post?'}</ThemedText>
       <ChipRow options={kindOptions} selected={kind} onSelect={setKind} />
 
+      {kind === 'song' ? <SongPicker song={song} onChange={setSong} /> : null}
+
       <Field
         label={prompt}
         value={body}
@@ -145,7 +151,11 @@ export default function ComposeScreen() {
         maxLength={MAX_POST_LENGTH}
         style={styles.body}
         textAlignVertical="top"
-        hint={`${body.length}/${MAX_POST_LENGTH}`}
+        hint={
+          kind === 'song'
+            ? `${body.length}/${MAX_POST_LENGTH} · Quote no more than a couple of lines of lyrics.`
+            : `${body.length}/${MAX_POST_LENGTH}`
+        }
       />
 
       {photosAllowed ? (
@@ -212,7 +222,12 @@ export default function ComposeScreen() {
       )}
 
       <ErrorText message={error} />
-      <Button label="Share" onPress={() => share()} busy={busy} disabled={!body.trim()} />
+      <Button
+        label="Share"
+        onPress={() => share()}
+        busy={busy}
+        disabled={!body.trim() || (kind === 'song' && !song)}
+      />
     </Screen>
   );
 }

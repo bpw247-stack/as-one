@@ -3,7 +3,7 @@
 
 import { supabase } from '@/lib/supabase';
 
-export type PostKind = 'struggle' | 'goal' | 'milestone' | 'life_event';
+export type PostKind = 'struggle' | 'goal' | 'milestone' | 'life_event' | 'song';
 
 export type Audience = 'corner' | 'everyone' | 'both' | 'anonymous';
 
@@ -32,6 +32,11 @@ export type FeedPost = {
   is_crisis: boolean;
   /** Storage paths; empty unless I'm allowed to see them (never in the Everyone feed). */
   photo_paths: string[];
+  /** Song posts only. */
+  song_title: string | null;
+  song_artist: string | null;
+  song_artwork_url: string | null;
+  song_url: string | null;
 };
 
 export type Comment = {
@@ -70,6 +75,7 @@ export const POST_KINDS: { kind: PostKind; label: string; prompt: string }[] = [
   { kind: 'goal', label: 'Goal', prompt: 'What do you want to achieve, and by when?' },
   { kind: 'milestone', label: 'Milestone', prompt: 'What did you accomplish?' },
   { kind: 'life_event', label: 'Life event', prompt: "What's happening in your life?" },
+  { kind: 'song', label: 'Song', prompt: 'What does this song mean to you?' },
 ];
 
 /** The preset reactions for each kind of post (must match the database). */
@@ -90,6 +96,11 @@ export const REACTIONS: Record<PostKind | 'crisis', { key: string; label: string
   life_event: [
     { key: 'happy_for_you', label: 'Happy for you' },
     { key: 'thinking_of_you', label: 'Thinking of you' },
+  ],
+  song: [
+    { key: 'song_hits', label: 'This song hits' },
+    { key: 'thanks_for_sharing', label: 'Thank you for sharing' },
+    { key: 'adding_it', label: 'Adding it to my playlist' },
   ],
   crisis: [
     { key: 'not_alone', label: 'You are not alone' },

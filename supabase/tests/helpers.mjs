@@ -101,11 +101,11 @@ export async function asServer(sql, params = []) {
 /** Publishes a post the way the screening function does, after it passes. */
 export async function publishPost(
   author,
-  { kind = 'struggle', body = 'hello', anonymous = false, corner = true, everyone = false, commentsPrivate = false, followUpOf = null, crisis = false, notifyBuddies = false } = {},
+  { kind = 'struggle', body = 'hello', anonymous = false, corner = true, everyone = false, commentsPrivate = false, followUpOf = null, crisis = false, notifyBuddies = false, song = null } = {},
 ) {
   const [{ create_post: id }] = await asServer(
-    'select create_post($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-    [author, kind, body, anonymous, corner, everyone, commentsPrivate, followUpOf, crisis, notifyBuddies],
+    'select create_post($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+    [author, kind, body, anonymous, corner, everyone, commentsPrivate, followUpOf, crisis, notifyBuddies, song],
   );
   return id;
 }

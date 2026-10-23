@@ -19,6 +19,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 
+import { lookupSong, type Song } from '../_shared/itunes.ts';
 import { isJpeg, MAX_PHOTO_BYTES, stripJpegMetadata, toBase64 } from '../_shared/jpeg.ts';
 import { screen, type ScreeningInput } from '../_shared/screening.ts';
 
@@ -56,6 +57,8 @@ type Request =
       notify_buddies?: boolean;
       /** Paths of JPEGs the app uploaded to pending/<user id>/. */
       photos?: string[];
+      /** Apple catalog id, for song posts. The server looks up the details itself. */
+      song_id?: string;
     }
   | { action: 'comment'; post_id: string; body: string; reply_to?: string | null }
   | { action: 'profile'; display_name: string; bio: string };
@@ -99,6 +102,7 @@ Deno.serve(async (req) => {
   let input: ScreeningInput;
   const pendingPhotos = request.action === 'post' ? (request.photos ?? []) : [];
   let photos: Uint8Array[] = [];
+  let song: Song | null = null;
   switch (request.action) {
     case 'post':
       if (pendingPhotos.length) {
@@ -111,7 +115,22 @@ Deno.serve(async (req) => {
           return reply({ error: err instanceof Error ? err.message : 'A photo could not be read' }, 400);
         }
       }
-      input = { kind: 'post', postKind: request.kind, text: request.body, images: photos.map(toBase64) };
+      if (request.kind === 'song') {
+        try {
+          song = request.song_id ? await lookupSong(request.song_id) : null;
+        } catch (err) {
+          console.error(err);
+          return reply({ error: 'Song lookup is unavailable right now' }, 502);
+        }
+        if (!song) return reply({ error: 'Song not found' }, 400);
+      }
+      input = {
+        kind: 'post',
+        postKind: request.kind,
+        text: request.body,
+        images: photos.map(toBase64),
+        song: song ? { title: song.title, artist: song.artist } : undefined,
+      };
       break;
     case 'comment': {
       // Context for the screener: the post being commented on. Read through
@@ -166,6 +185,7 @@ Deno.serve(async (req) => {
       follow_up_of: request.follow_up_of ?? null,
       crisis,
       notify_buddies: request.notify_buddies ?? false,
+      song,
     });
     if (error) return reply({ error: error.message }, 400);
 
