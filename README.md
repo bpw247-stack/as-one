@@ -43,7 +43,7 @@ node --test tests/*.test.mjs      # input validation
 
 - [x] **Phase 1** — accounts (18+), profiles, Corner requests, block, account deletion
 - [x] **Phase 2** — posting & feeds (Corner tab, Everyone tab, anonymous posts)
-- [ ] Phase 3 — reactions, comments, goal follow-ups
+- [x] **Phase 3** — reactions, comments, goal follow-ups, Activity
 - [ ] Phase 4 — safety: screening, crisis mode, reports
 - [ ] Phase 5 — buddies & notifications
 - [ ] Phase 6 — photos

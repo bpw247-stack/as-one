@@ -42,6 +42,7 @@ function RootNavigator() {
         <Stack.Screen name="blocked" options={{ title: 'Blocked' }} />
         <Stack.Screen name="compose" options={{ title: 'Share', presentation: 'modal' }} />
         <Stack.Screen name="my-posts" options={{ title: 'Your posts' }} />
+        <Stack.Screen name="post/[id]" options={{ title: 'Post' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

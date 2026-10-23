@@ -1,9 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Button, ErrorText, Field, Screen } from '@/components/ui';
+import { Button, Card, ErrorText, Field, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { notify } from '@/lib/confirm';
@@ -17,8 +17,14 @@ import {
 } from '@/lib/posts';
 
 export default function ComposeScreen() {
-  const params = useLocalSearchParams<{ audience?: Audience }>();
-  const [kind, setKind] = useState<PostKind>('struggle');
+  const params = useLocalSearchParams<{
+    audience?: Audience;
+    followUpOf?: string;
+    followUpExcerpt?: string;
+  }>();
+  const followUpOf = params.followUpOf;
+  const [kind, setKind] = useState<PostKind>(followUpOf ? 'milestone' : 'struggle');
+  const [commentsPrivate, setCommentsPrivate] = useState(false);
   const [audience, setAudience] = useState<Audience>(
     AUDIENCES.some((a) => a.audience === params.audience) ? params.audience! : 'corner',
   );
@@ -26,15 +32,25 @@ export default function ComposeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const prompt = POST_KINDS.find((k) => k.kind === kind)!.prompt;
+  const prompt = followUpOf
+    ? kind === 'milestone'
+      ? 'You did it! Tell everyone who supported you.'
+      : 'How is it going?'
+    : POST_KINDS.find((k) => k.kind === kind)!.prompt;
+  const kindOptions = followUpOf
+    ? [
+        { value: 'milestone' as PostKind, label: 'I did it!' },
+        { value: 'goal' as PostKind, label: 'Progress update' },
+      ]
+    : POST_KINDS.map((k) => ({ value: k.kind, label: k.label }));
   const audienceInfo = AUDIENCES.find((a) => a.audience === audience)!;
 
   async function share() {
     setBusy(true);
     setError(null);
     try {
-      await createPost(kind, body.trim(), audience);
-      if (audience === 'anonymous') {
+      await createPost(kind, body.trim(), audience, { commentsPrivate, followUpOf });
+      if (audience === 'anonymous' && !followUpOf) {
         notify('Posted anonymously', 'It will appear in the Everyone feed in a few minutes.');
       }
       router.back();
@@ -46,12 +62,17 @@ export default function ComposeScreen() {
 
   return (
     <Screen>
-      <ThemedText type="smallBold">What kind of post?</ThemedText>
-      <ChipRow
-        options={POST_KINDS.map((k) => ({ value: k.kind, label: k.label }))}
-        selected={kind}
-        onSelect={setKind}
-      />
+      {followUpOf ? (
+        <Card>
+          <ThemedText type="small" themeColor="textSecondary">
+            Follow-up to your goal
+          </ThemedText>
+          <ThemedText>“{params.followUpExcerpt}”</ThemedText>
+        </Card>
+      ) : null}
+
+      <ThemedText type="smallBold">{followUpOf ? 'What’s the update?' : 'What kind of post?'}</ThemedText>
+      <ChipRow options={kindOptions} selected={kind} onSelect={setKind} />
 
       <Field
         label={prompt}
@@ -64,15 +85,35 @@ export default function ComposeScreen() {
         hint={`${body.length}/${MAX_POST_LENGTH}`}
       />
 
-      <ThemedText type="smallBold">Who can see this?</ThemedText>
-      <ChipRow
-        options={AUDIENCES.map((a) => ({ value: a.audience, label: a.label }))}
-        selected={audience}
-        onSelect={setAudience}
-      />
-      <ThemedText type="small" themeColor="textSecondary">
-        {audienceInfo.description}
-      </ThemedText>
+      {followUpOf ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Shared with the same people as your original goal. Everyone who supported it will be
+          told.
+        </ThemedText>
+      ) : (
+        <>
+          <ThemedText type="smallBold">Who can see this?</ThemedText>
+          <ChipRow
+            options={AUDIENCES.map((a) => ({ value: a.audience, label: a.label }))}
+            selected={audience}
+            onSelect={setAudience}
+          />
+          <ThemedText type="small" themeColor="textSecondary">
+            {audienceInfo.description}
+          </ThemedText>
+          {audience !== 'anonymous' ? (
+            <View style={styles.switchRow}>
+              <View style={styles.flex}>
+                <ThemedText type="smallBold">Only I see comments</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Each person sees only their own comment and your reply.
+                </ThemedText>
+              </View>
+              <Switch value={commentsPrivate} onValueChange={setCommentsPrivate} />
+            </View>
+          ) : null}
+        </>
+      )}
 
       <ErrorText message={error} />
       <Button label="Share" onPress={share} busy={busy} disabled={!body.trim()} />
@@ -127,4 +168,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   body: { minHeight: 140, paddingTop: Spacing.two },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  flex: { flex: 1 },
 });

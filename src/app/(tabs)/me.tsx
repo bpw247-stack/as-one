@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { StyleSheet, Switch, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, PersonRow, Screen } from '@/components/ui';
@@ -7,12 +8,14 @@ import { useLoad } from '@/hooks/use-load';
 import { useUserId } from '@/lib/auth';
 import { confirm, notify } from '@/lib/confirm';
 import { deleteAccount, getCorner, getProfile } from '@/lib/corner';
+import { useShowNameOnReact } from '@/lib/preferences';
 import { supabase } from '@/lib/supabase';
 
 export default function MeScreen() {
   const myId = useUserId();
   const { data, error } = useLoad(() => Promise.all([getProfile(myId), getCorner(myId)]));
   const [deleting, setDeleting] = useState(false);
+  const [showName, setShowName] = useShowNameOnReact();
   const [profile, corner] = data ?? [null, []];
 
   async function onDelete() {
@@ -61,6 +64,18 @@ export default function MeScreen() {
         <Button label="Find people" onPress={() => router.push('/search')} />
       </Card>
 
+      <Card>
+        <View style={styles.switchRow}>
+          <View style={styles.flex}>
+            <ThemedText type="smallBold">Show my name when I react</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              When off, people see your reactions as coming from “Someone.”
+            </ThemedText>
+          </View>
+          <Switch value={showName} onValueChange={setShowName} />
+        </View>
+      </Card>
+
       <Button label="Your posts" variant="secondary" onPress={() => router.push('/my-posts')} />
       <Button label="Blocked people" variant="secondary" onPress={() => router.push('/blocked')} />
       <Button label="Sign out" variant="secondary" onPress={() => supabase.auth.signOut()} />
@@ -68,3 +83,8 @@ export default function MeScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  flex: { flex: 1 },
+});

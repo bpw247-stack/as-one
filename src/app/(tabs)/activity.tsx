@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Pressable } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, EmptyState, ErrorText, PersonRow, Screen } from '@/components/ui';
@@ -7,10 +8,17 @@ import { useLoad } from '@/hooks/use-load';
 import { useUserId } from '@/lib/auth';
 import { notify } from '@/lib/confirm';
 import { cancelRequest, getRequests, respondToRequest } from '@/lib/corner';
+import { myActivity, REACTION_LABELS, type ActivityItem } from '@/lib/posts';
+import { timeAgo } from '@/lib/time';
 
+// Corner requests, plus reactions, comments, replies and goal follow-ups.
+// Everything here is in-app only — none of it sends a push notification.
 export default function ActivityScreen() {
   const myId = useUserId();
-  const { data, error, reload } = useLoad(() => getRequests(myId));
+  const { data, error, reload } = useLoad(async () => {
+    const [requests, activity] = await Promise.all([getRequests(myId), myActivity()]);
+    return { ...requests, activity };
+  });
   const [busyId, setBusyId] = useState<string | null>(null);
 
   async function act(id: string, action: () => Promise<void>) {
@@ -27,15 +35,16 @@ export default function ActivityScreen() {
 
   const incoming = data?.incoming ?? [];
   const outgoing = data?.outgoing ?? [];
+  const activity = data?.activity ?? [];
 
   return (
     <Screen title="Activity" withTabBar>
       <ErrorText message={error} />
 
-      {data && !incoming.length && !outgoing.length ? (
+      {data && !incoming.length && !outgoing.length && !activity.length ? (
         <EmptyState
           title="All caught up"
-          body="Corner requests will show up here. Reactions and comments will too, once posting arrives."
+          body="Corner requests, reactions and comments on your posts will show up here."
         />
       ) : null}
 
@@ -68,9 +77,25 @@ export default function ActivityScreen() {
         </Card>
       ) : null}
 
+      {activity.map((item, i) => (
+        <Pressable
+          key={`${item.kind}-${item.post_id}-${item.created_at}-${i}`}
+          onPress={() => router.push(`/post/${item.post_id}`)}>
+          <Card>
+            <ThemedText>{describe(item)}</ThemedText>
+            {item.body && item.kind !== 'follow_up' ? (
+              <ThemedText themeColor="textSecondary">“{item.body}”</ThemedText>
+            ) : null}
+            <ThemedText type="small" themeColor="textSecondary">
+              {timeAgo(item.created_at)}
+            </ThemedText>
+          </Card>
+        </Pressable>
+      ))}
+
       {outgoing.length ? (
         <Card>
-          <ThemedText type="smallBold">Waiting on</ThemedText>
+          <ThemedText type="smallBold">Corner requests you sent</ThemedText>
           {outgoing.map((p) => (
             <PersonRow
               key={p.id}
@@ -91,4 +116,18 @@ export default function ActivityScreen() {
       ) : null}
     </Screen>
   );
+}
+
+function describe(item: ActivityItem): string {
+  const who = item.actor_display_name ?? 'Someone';
+  switch (item.kind) {
+    case 'reaction':
+      return `${who} sent “${REACTION_LABELS[item.reaction ?? ''] ?? item.reaction}” on “${item.post_excerpt}”`;
+    case 'comment':
+      return `${who} commented on “${item.post_excerpt}”`;
+    case 'reply':
+      return `${who} replied to your comment`;
+    case 'follow_up':
+      return `${who} posted a follow-up to a goal you supported: “${item.body}”`;
+  }
 }
