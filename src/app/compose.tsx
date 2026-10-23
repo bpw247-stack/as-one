@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
@@ -15,6 +16,8 @@ import {
   type Audience,
   type PostKind,
 } from '@/lib/posts';
+import { useUserId } from '@/lib/auth';
+import { MAX_PHOTOS, pickPhotos, uploadPending } from '@/lib/photos';
 import { problemWith, publishPost } from '@/lib/publish';
 
 export default function ComposeScreen() {
@@ -27,10 +30,15 @@ export default function ComposeScreen() {
   const [kind, setKind] = useState<PostKind>(followUpOf ? 'milestone' : 'struggle');
   const [commentsPrivate, setCommentsPrivate] = useState(false);
   const [notifyBuddies, setNotifyBuddies] = useState(false);
+  const myId = useUserId();
+  // Local photos, and their uploaded paths once sent (kept if a crisis check holds the post).
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploaded, setUploaded] = useState<Record<string, string>>({});
   const [audience, setAudience] = useState<Audience>(
     AUDIENCES.some((a) => a.audience === params.audience) ? params.audience! : 'corner',
   );
   const [body, setBody] = useState('');
+  const photosAllowed = !followUpOf && (audience === 'corner' || audience === 'both');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Set when screening thinks this might be a crisis: the helpline comes first.
@@ -49,11 +57,33 @@ export default function ComposeScreen() {
     : POST_KINDS.map((k) => ({ value: k.kind, label: k.label }));
   const audienceInfo = AUDIENCES.find((a) => a.audience === audience)!;
 
+  async function addPhotos() {
+    try {
+      const picked = await pickPhotos(MAX_PHOTOS - photos.length);
+      setPhotos((current) => [...current, ...picked].slice(0, MAX_PHOTOS));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function uploadAll(): Promise<string[]> {
+    const paths: string[] = [];
+    const done = { ...uploaded };
+    for (const uri of photos) {
+      done[uri] ??= await uploadPending(myId, uri);
+      paths.push(done[uri]);
+    }
+    setUploaded(done);
+    return paths;
+  }
+
   async function share(crisisAcknowledged = false) {
     setBusy(true);
     setError(null);
     try {
+      const photoPaths = photosAllowed ? await uploadAll() : [];
       const result = await publishPost(kind, body.trim(), audience, {
+        photos: photoPaths,
         commentsPrivate,
         followUpOf,
         crisisAcknowledged,
@@ -117,6 +147,28 @@ export default function ComposeScreen() {
         textAlignVertical="top"
         hint={`${body.length}/${MAX_POST_LENGTH}`}
       />
+
+      {photosAllowed ? (
+        <View style={styles.photoRow}>
+          {photos.map((uri) => (
+            <Pressable
+              key={uri}
+              accessibilityRole="button"
+              accessibilityLabel="Remove photo"
+              onPress={() => setPhotos((current) => current.filter((p) => p !== uri))}>
+              <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
+            </Pressable>
+          ))}
+          {photos.length < MAX_PHOTOS ? (
+            <Button label={photos.length ? 'Add more' : 'Add photos'} variant="secondary" onPress={addPhotos} />
+          ) : null}
+        </View>
+      ) : null}
+      {photos.length && !photosAllowed ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Photos are only shared with your Corner, so they won&apos;t be included here.
+        </ThemedText>
+      ) : null}
 
       {followUpOf ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -213,5 +265,7 @@ const styles = StyleSheet.create({
   },
   body: { minHeight: 140, paddingTop: Spacing.two },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  photoRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
+  thumb: { width: 64, height: 64, borderRadius: Spacing.two },
   flex: { flex: 1 },
 });

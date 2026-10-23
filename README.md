@@ -91,6 +91,6 @@ node --test tests/*.test.mjs      # app logic and the screening module
 - [x] **Phase 3** — reactions, comments, goal follow-ups, Activity
 - [x] **Phase 4** — safety: AI screening, crisis mode, reports, penalties, appeals
 - [x] **Phase 5** — buddies & push notifications (including the next-day check-in)
-- [ ] Phase 6 — photos
+- [x] **Phase 6** — photos on Corner posts (screened, location data stripped)
 - [ ] Phase 7 — song posts
 - [ ] Phase 8 — beta → App Store

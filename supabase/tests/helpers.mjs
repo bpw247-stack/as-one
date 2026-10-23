@@ -20,6 +20,21 @@ const SUPABASE_STUB = `
   create function auth.uid() returns uuid language sql stable as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
   $$;
+  -- Just enough of Supabase Storage for the photo policies.
+  create schema storage;
+  create table storage.buckets (id text primary key, name text, public boolean);
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text references storage.buckets (id),
+    name text,
+    owner uuid default nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  );
+  create function storage.foldername(name text) returns text[] language sql immutable as $$
+    select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
+  $$;
+  alter table storage.objects enable row level security;
+  grant usage on schema storage to authenticated, service_role;
+  grant all on storage.objects to authenticated, service_role;
   grant usage on schema public, auth to anon, authenticated, service_role;
   grant execute on function auth.uid() to anon, authenticated;
   -- Supabase grants table access broadly and relies on RLS; mirror that.

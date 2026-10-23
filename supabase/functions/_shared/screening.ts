@@ -17,6 +17,7 @@ export const BLOCK_CATEGORIES = [
   'harassment',
   'sexual',
   'doxxing',
+  'graphic',
 ] as const;
 
 export type BlockCategory = (typeof BLOCK_CATEGORIES)[number];
@@ -29,7 +30,8 @@ export type ScreeningResult =
   | { verdict: 'unavailable' };
 
 export type ScreeningInput =
-  | { kind: 'post'; postKind: string; text: string }
+  /** `images` are base64 JPEGs, already stripped of metadata. */
+  | { kind: 'post'; postKind: string; text: string; images?: string[] }
   | { kind: 'comment'; text: string; postExcerpt: string }
   | { kind: 'profile'; displayName: string; bio: string };
 
@@ -42,6 +44,7 @@ Block text only when it shows serious ill intent, in one of these categories:
 - harassment: insults or degradation meant to wound a person, not to help them.
 - sexual: sexual content directed at someone.
 - doxxing: reveals someone's private information (home address, phone number, workplace with intent to expose, real identity of an anonymous poster), or tries to unmask who wrote an anonymous post.
+- graphic: a photo showing nudity or sexual content, gore, graphic injury or self-harm wounds, or hate symbols. (Photos are attached before the text when there are any; screen them together with it.)
 
 Allow everything else, including: blunt honesty and tough love between friends, swearing, dark humor about one's own life, anger at situations, venting about one's own struggles, and frank talk about addiction, sobriety, mental health, grief or sex as personal experience. When text is harsh but not clearly meant to wound, allow it.
 
@@ -64,12 +67,25 @@ const OUTPUT_SCHEMA = {
 function describe(input: ScreeningInput): string {
   switch (input.kind) {
     case 'post':
-      return `A ${input.postKind.replace('_', ' ')} post:\n<content>\n${input.text}\n</content>`;
+      return `A ${input.postKind.replace('_', ' ')} post${input.images?.length ? ` with ${input.images.length} photo(s) above` : ''}:\n<content>\n${input.text}\n</content>`;
     case 'comment':
       return `A comment on someone's post. The post, for context only (it was already screened):\n<post>\n${input.postExcerpt}\n</post>\n\nThe comment to screen:\n<content>\n${input.text}\n</content>`;
     case 'profile':
       return `A profile's display name and bio:\n<content>\nName: ${input.displayName}\nBio: ${input.bio}\n</content>`;
   }
+}
+
+function contentFor(input: ScreeningInput): Anthropic.Beta.BetaContentBlockParam[] {
+  const images = input.kind === 'post' ? (input.images ?? []) : [];
+  return [
+    ...images.map(
+      (data): Anthropic.Beta.BetaImageBlockParam => ({
+        type: 'image',
+        source: { type: 'base64', media_type: 'image/jpeg', data },
+      }),
+    ),
+    { type: 'text', text: describe(input) },
+  ];
 }
 
 export async function screen(client: Anthropic, input: ScreeningInput): Promise<ScreeningResult> {
@@ -87,7 +103,7 @@ export async function screen(client: Anthropic, input: ScreeningInput): Promise<
         effort: 'medium',
         format: { type: 'json_schema', schema: OUTPUT_SCHEMA },
       },
-      messages: [{ role: 'user', content: describe(input) }],
+      messages: [{ role: 'user', content: contentFor(input) }],
     });
   } catch (err) {
     console.error('screening request failed', err);

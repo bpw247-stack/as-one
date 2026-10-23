@@ -1,7 +1,12 @@
-// The only way text gets published on As One. The app sends posts, comments
-// and profile edits here; this function checks who's signed in, screens the
-// text, and only then writes it with the service role. The database refuses
-// those writes from anyone else, so screening can't be skipped.
+// The only way text and photos get published on As One. The app sends posts,
+// comments and profile edits here; this function checks who's signed in,
+// screens the text (and any photos), and only then writes it with the service
+// role. The database refuses those writes from anyone else, so screening
+// can't be skipped.
+//
+// Photos: the app uploads JPEGs to pending/<user id>/ in the post-photos
+// bucket and sends their paths. They're stripped of metadata here, screened
+// with the text, then stored under posts/<post id>/ and attached.
 //
 // Responses (JSON):
 //   { status: 'ok', id? }            published
@@ -14,7 +19,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 
+import { isJpeg, MAX_PHOTO_BYTES, stripJpegMetadata, toBase64 } from '../_shared/jpeg.ts';
 import { screen, type ScreeningInput } from '../_shared/screening.ts';
+
+const PHOTO_BUCKET = 'post-photos';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,9 +54,31 @@ type Request =
       follow_up_of?: string | null;
       crisis_acknowledged?: boolean;
       notify_buddies?: boolean;
+      /** Paths of JPEGs the app uploaded to pending/<user id>/. */
+      photos?: string[];
     }
   | { action: 'comment'; post_id: string; body: string; reply_to?: string | null }
   | { action: 'profile'; display_name: string; bio: string };
+
+/** Downloads the app's pending uploads and strips their metadata. */
+async function loadPendingPhotos(userId: string, paths: string[]): Promise<Uint8Array[]> {
+  if (paths.length > 4) throw new Error('Up to 4 photos per post');
+  const allowed = new RegExp(`^pending/${userId}/[A-Za-z0-9_-]+\\.jpg$`);
+  return Promise.all(
+    paths.map(async (path) => {
+      if (!allowed.test(path)) throw new Error('Invalid photo');
+      const { data, error } = await admin.storage.from(PHOTO_BUCKET).download(path);
+      if (error || !data) throw new Error('A photo could not be read');
+      const bytes = new Uint8Array(await data.arrayBuffer());
+      if (bytes.length > MAX_PHOTO_BYTES || !isJpeg(bytes)) throw new Error('Photos must be JPEGs under 8 MB');
+      return stripJpegMetadata(bytes);
+    }),
+  );
+}
+
+async function removePending(paths: string[]) {
+  if (paths.length) await admin.storage.from(PHOTO_BUCKET).remove(paths);
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -67,9 +97,21 @@ Deno.serve(async (req) => {
   }
 
   let input: ScreeningInput;
+  const pendingPhotos = request.action === 'post' ? (request.photos ?? []) : [];
+  let photos: Uint8Array[] = [];
   switch (request.action) {
     case 'post':
-      input = { kind: 'post', postKind: request.kind, text: request.body };
+      if (pendingPhotos.length) {
+        if (request.anonymous || !request.to_corner || request.follow_up_of) {
+          return reply({ error: 'Photos are for Corner posts only' }, 400);
+        }
+        try {
+          photos = await loadPendingPhotos(userId, pendingPhotos);
+        } catch (err) {
+          return reply({ error: err instanceof Error ? err.message : 'A photo could not be read' }, 400);
+        }
+      }
+      input = { kind: 'post', postKind: request.kind, text: request.body, images: photos.map(toBase64) };
       break;
     case 'comment': {
       // Context for the screener: the post being commented on. Read through
@@ -103,6 +145,7 @@ Deno.serve(async (req) => {
       category: result.category,
       excerpt,
     });
+    await removePending(pendingPhotos);
     return reply({ status: 'blocked', paused: paused === true });
   }
 
@@ -125,6 +168,30 @@ Deno.serve(async (req) => {
       notify_buddies: request.notify_buddies ?? false,
     });
     if (error) return reply({ error: error.message }, 400);
+
+    if (photos.length) {
+      const postId = data as string;
+      const stored = photos.map((_, i) => `posts/${postId}/${i}.jpg`);
+      try {
+        for (const [i, bytes] of photos.entries()) {
+          const { error: uploadError } = await admin.storage
+            .from(PHOTO_BUCKET)
+            .upload(stored[i], bytes, { contentType: 'image/jpeg' });
+          if (uploadError) throw uploadError;
+        }
+        const { error: attachError } = await admin.rpc('attach_photos', {
+          actor: userId,
+          post_id: postId,
+          paths: stored,
+        });
+        if (attachError) throw attachError;
+      } catch (err) {
+        console.error('storing photos failed', err);
+        return reply({ error: 'Your post was shared, but its photos could not be saved.' }, 500);
+      } finally {
+        await removePending(pendingPhotos);
+      }
+    }
     return reply({ status: 'ok', id: data, support: crisis });
   }
 

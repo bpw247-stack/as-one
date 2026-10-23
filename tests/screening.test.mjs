@@ -37,13 +37,13 @@ test('asks the default model with fallbacks and a strict JSON schema', async () 
   assert.equal(params.output_config.format.schema.additionalProperties, false);
   assert.equal('temperature' in params, false);
   assert.equal('thinking' in params, false);
-  assert.match(params.messages[0].content, /<content>\nRough week.\n<\/content>/);
+  assert.match(params.messages[0].content.at(-1).text, /<content>\nRough week.\n<\/content>/);
 });
 
 test('comments are screened with the post as context', async () => {
   const client = fakeClient(answer({ verdict: 'allow', category: 'none' }));
   await screen(client, { kind: 'comment', text: 'proud of you', postExcerpt: '3 months sober' });
-  assert.match(client.calls[0].messages[0].content, /<post>\n3 months sober\n<\/post>/);
+  assert.match(client.calls[0].messages[0].content.at(-1).text, /<post>\n3 months sober\n<\/post>/);
 });
 
 test('block, crisis and allow verdicts', async () => {
@@ -81,4 +81,17 @@ test('parseVerdict rejects malformed output and defaults unknown block categorie
     verdict: 'block',
     category: 'harassment',
   });
+});
+
+test('photos are sent as images ahead of the text', async () => {
+  const client = fakeClient(answer({ verdict: 'block', category: 'graphic' }));
+  const result = await screen(client, { kind: 'post', postKind: 'milestone', text: 'Finished!', images: ['AAAA', 'BBBB'] });
+  assert.deepEqual(result, { verdict: 'block', category: 'graphic' });
+  const content = client.calls[0].messages[0].content;
+  assert.deepEqual(
+    content.map((b) => b.type),
+    ['image', 'image', 'text'],
+  );
+  assert.deepEqual(content[0].source, { type: 'base64', media_type: 'image/jpeg', data: 'AAAA' });
+  assert.match(content[2].text, /2 photo\(s\)/);
 });

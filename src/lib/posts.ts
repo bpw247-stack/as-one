@@ -30,6 +30,8 @@ export type FeedPost = {
   follow_up_excerpt: string | null;
   /** Possible crisis: reactions only, with their own set. */
   is_crisis: boolean;
+  /** Storage paths; empty unless I'm allowed to see them (never in the Everyone feed). */
+  photo_paths: string[];
 };
 
 export type Comment = {

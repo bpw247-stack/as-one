@@ -42,6 +42,7 @@ export function publishPost(
     followUpOf?: string;
     crisisAcknowledged?: boolean;
     notifyBuddies?: boolean;
+    photos?: string[];
   } = {},
 ) {
   return invoke({
@@ -55,6 +56,7 @@ export function publishPost(
     follow_up_of: options.followUpOf ?? null,
     crisis_acknowledged: options.crisisAcknowledged ?? false,
     notify_buddies: options.notifyBuddies ?? false,
+    photos: options.photos ?? [],
   });
 }
 

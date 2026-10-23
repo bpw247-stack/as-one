@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { PostPhotos } from '@/components/post-photos';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -85,6 +86,8 @@ export function PostCard({
         ) : null}
 
         <ThemedText>{post.body}</ThemedText>
+
+        {post.photo_paths?.length ? <PostPhotos paths={post.photo_paths} /> : null}
 
         {post.is_mine && post.is_anonymous ? (
           <ThemedText type="small" themeColor="textSecondary">
