@@ -18,6 +18,6 @@
     "expo-env.d.ts"
   ],
   "exclude": [
-    "supabase/functions/screen"
+    "supabase/functions/*/index.ts"
   ]
 }

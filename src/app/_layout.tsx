@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Card, Screen } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { usePushNotifications } from '@/lib/notifications';
 import { isConfigured } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
@@ -23,6 +24,7 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { session, loading } = useAuth();
+  usePushNotifications(session !== null);
 
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();

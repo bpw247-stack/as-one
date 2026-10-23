@@ -45,6 +45,7 @@ type Request =
       comments_private?: boolean;
       follow_up_of?: string | null;
       crisis_acknowledged?: boolean;
+      notify_buddies?: boolean;
     }
   | { action: 'comment'; post_id: string; body: string; reply_to?: string | null }
   | { action: 'profile'; display_name: string; bio: string };
@@ -121,6 +122,7 @@ Deno.serve(async (req) => {
       comments_private: request.comments_private ?? false,
       follow_up_of: request.follow_up_of ?? null,
       crisis,
+      notify_buddies: request.notify_buddies ?? false,
     });
     if (error) return reply({ error: error.message }, 400);
     return reply({ status: 'ok', id: data, support: crisis });

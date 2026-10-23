@@ -7,6 +7,12 @@ import { Button, Card, EmptyState, ErrorText, PersonRow, Screen } from '@/compon
 import { useLoad } from '@/hooks/use-load';
 import { useUserId } from '@/lib/auth';
 import { notify } from '@/lib/confirm';
+import {
+  buddySuggestions,
+  myBuddyRequests,
+  respondToBuddyRequest,
+  sendBuddyRequest,
+} from '@/lib/buddies';
 import { cancelRequest, getRequests, respondToRequest } from '@/lib/corner';
 import { myActivity, REACTION_LABELS, type ActivityItem } from '@/lib/posts';
 import { timeAgo } from '@/lib/time';
@@ -16,8 +22,13 @@ import { timeAgo } from '@/lib/time';
 export default function ActivityScreen() {
   const myId = useUserId();
   const { data, error, reload } = useLoad(async () => {
-    const [requests, activity] = await Promise.all([getRequests(myId), myActivity()]);
-    return { ...requests, activity };
+    const [requests, activity, buddyRequests, suggestions] = await Promise.all([
+      getRequests(myId),
+      myActivity(),
+      myBuddyRequests(),
+      buddySuggestions(),
+    ]);
+    return { ...requests, activity, buddyRequests: buddyRequests.filter((b) => b.incoming), suggestions };
   });
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -36,12 +47,19 @@ export default function ActivityScreen() {
   const incoming = data?.incoming ?? [];
   const outgoing = data?.outgoing ?? [];
   const activity = data?.activity ?? [];
+  const buddyRequests = data?.buddyRequests ?? [];
+  const suggestions = data?.suggestions ?? [];
 
   return (
     <Screen title="Activity" withTabBar>
       <ErrorText message={error} />
 
-      {data && !incoming.length && !outgoing.length && !activity.length ? (
+      {data &&
+      !incoming.length &&
+      !outgoing.length &&
+      !activity.length &&
+      !buddyRequests.length &&
+      !suggestions.length ? (
         <EmptyState
           title="All caught up"
           body="Corner requests, reactions and comments on your posts will show up here."
@@ -76,6 +94,53 @@ export default function ActivityScreen() {
           ))}
         </Card>
       ) : null}
+
+      {buddyRequests.length ? (
+        <Card>
+          <ThemedText type="smallBold">Want to be your buddy</ThemedText>
+          {buddyRequests.map((p) => (
+            <PersonRow
+              key={p.id}
+              displayName={p.display_name}
+              username={p.username}
+              onPress={() => router.push(`/user/${p.username}`)}
+              actions={
+                <>
+                  <Button
+                    label="Accept"
+                    busy={busyId === p.id}
+                    onPress={() => act(p.id, () => respondToBuddyRequest(p.id, true))}
+                  />
+                  <Button
+                    label="Decline"
+                    variant="secondary"
+                    disabled={busyId === p.id}
+                    onPress={() => act(p.id, () => respondToBuddyRequest(p.id, false))}
+                  />
+                </>
+              }
+            />
+          ))}
+        </Card>
+      ) : null}
+
+      {suggestions.map((p) => (
+        <Card key={`suggest-${p.id}`}>
+          <ThemedText>
+            You and {p.display_name} support each other a lot. Want to become buddies?
+          </ThemedText>
+          <Button
+            label="Ask to be buddies"
+            variant="secondary"
+            busy={busyId === p.id}
+            onPress={() =>
+              act(p.id, async () => {
+                await sendBuddyRequest(p.id);
+              })
+            }
+          />
+        </Card>
+      ))}
 
       {activity.map((item, i) => (
         <Pressable

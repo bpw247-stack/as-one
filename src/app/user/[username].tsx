@@ -18,6 +18,14 @@ import {
   type Relationship,
 } from '@/lib/corner';
 import { profilePosts } from '@/lib/posts';
+import {
+  buddyStatus,
+  cancelBuddyRequest,
+  removeBuddy,
+  respondToBuddyRequest,
+  sendBuddyRequest,
+  type BuddyStatus,
+} from '@/lib/buddies';
 
 const STATUS_TEXT: Record<Relationship, string | null> = {
   self: 'This is you.',
@@ -39,7 +47,9 @@ export default function UserScreen() {
       getRelationship(myId, profile.id),
       profilePosts(profile.username),
     ]);
-    return { profile, relationship, posts };
+    const buddy: BuddyStatus | null =
+      relationship === 'corner' ? await buddyStatus(profile.id) : null;
+    return { profile, relationship, posts, buddy };
   });
 
   async function act(action: () => Promise<unknown>) {
@@ -66,7 +76,7 @@ export default function UserScreen() {
     );
   }
 
-  const { profile, relationship, posts } = data;
+  const { profile, relationship, posts, buddy } = data;
   const status = STATUS_TEXT[relationship];
 
   async function onRemove() {
@@ -143,6 +153,61 @@ export default function UserScreen() {
           <Button label="Remove from my Corner" variant="secondary" disabled={busy} onPress={onRemove} />
         ) : null}
       </Card>
+
+      {buddy ? (
+        <Card>
+          <ThemedText type="smallBold">
+            {buddy === 'buddies' ? "You're buddies" : 'Buddies'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {buddy === 'buddies'
+              ? "You can notify each other when you post, and you'll be told if either of you might need extra support."
+              : buddy === 'request_sent'
+                ? "Buddy request sent. You'll be buddies once they accept."
+                : buddy === 'request_received'
+                  ? 'They asked to be your buddy.'
+                  : 'Buddies are your closest people: notified when you choose, and told if you might need extra support.'}
+          </ThemedText>
+          {buddy === 'none' ? (
+            <Button
+              label="Ask to be buddies"
+              busy={busy}
+              onPress={() => act(() => sendBuddyRequest(profile.id))}
+            />
+          ) : null}
+          {buddy === 'request_received' ? (
+            <>
+              <Button
+                label="Accept"
+                busy={busy}
+                onPress={() => act(() => respondToBuddyRequest(profile.id, true))}
+              />
+              <Button
+                label="Decline"
+                variant="secondary"
+                disabled={busy}
+                onPress={() => act(() => respondToBuddyRequest(profile.id, false))}
+              />
+            </>
+          ) : null}
+          {buddy === 'request_sent' ? (
+            <Button
+              label="Cancel request"
+              variant="secondary"
+              busy={busy}
+              onPress={() => act(() => cancelBuddyRequest(profile.id))}
+            />
+          ) : null}
+          {buddy === 'buddies' ? (
+            <Button
+              label="Stop being buddies"
+              variant="secondary"
+              busy={busy}
+              onPress={() => act(() => removeBuddy(profile.id))}
+            />
+          ) : null}
+        </Card>
+      ) : null}
 
       {posts.length ? (
         posts.map((post) => <PostCard key={post.id} post={post} onDeleted={reload} />)

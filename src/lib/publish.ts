@@ -37,7 +37,12 @@ export function publishPost(
   kind: PostKind,
   body: string,
   audience: Audience,
-  options: { commentsPrivate?: boolean; followUpOf?: string; crisisAcknowledged?: boolean } = {},
+  options: {
+    commentsPrivate?: boolean;
+    followUpOf?: string;
+    crisisAcknowledged?: boolean;
+    notifyBuddies?: boolean;
+  } = {},
 ) {
   return invoke({
     action: 'post',
@@ -49,6 +54,7 @@ export function publishPost(
     comments_private: options.commentsPrivate ?? false,
     follow_up_of: options.followUpOf ?? null,
     crisis_acknowledged: options.crisisAcknowledged ?? false,
+    notify_buddies: options.notifyBuddies ?? false,
   });
 }
 

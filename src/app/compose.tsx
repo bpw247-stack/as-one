@@ -26,6 +26,7 @@ export default function ComposeScreen() {
   const followUpOf = params.followUpOf;
   const [kind, setKind] = useState<PostKind>(followUpOf ? 'milestone' : 'struggle');
   const [commentsPrivate, setCommentsPrivate] = useState(false);
+  const [notifyBuddies, setNotifyBuddies] = useState(false);
   const [audience, setAudience] = useState<Audience>(
     AUDIENCES.some((a) => a.audience === params.audience) ? params.audience! : 'corner',
   );
@@ -56,6 +57,7 @@ export default function ComposeScreen() {
         commentsPrivate,
         followUpOf,
         crisisAcknowledged,
+        notifyBuddies: audience !== 'anonymous' && notifyBuddies,
       });
       if (result.status === 'crisis') {
         setCrisisHold(true);
@@ -141,6 +143,17 @@ export default function ComposeScreen() {
                 </ThemedText>
               </View>
               <Switch value={commentsPrivate} onValueChange={setCommentsPrivate} />
+            </View>
+          ) : null}
+          {audience !== 'anonymous' ? (
+            <View style={styles.switchRow}>
+              <View style={styles.flex}>
+                <ThemedText type="smallBold">Notify my buddies</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Sends your buddies a notification when this goes up.
+                </ThemedText>
+              </View>
+              <Switch value={notifyBuddies} onValueChange={setNotifyBuddies} />
             </View>
           ) : null}
         </>

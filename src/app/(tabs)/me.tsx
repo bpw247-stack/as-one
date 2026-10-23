@@ -8,18 +8,20 @@ import { useLoad } from '@/hooks/use-load';
 import { useUserId } from '@/lib/auth';
 import { confirm, notify } from '@/lib/confirm';
 import { deleteAccount, getCorner, getProfile } from '@/lib/corner';
+import { unregisterForPush } from '@/lib/notifications';
 import { useShowNameOnReact } from '@/lib/preferences';
 import { DECISION_LABELS, myDecisions, myStatus } from '@/lib/safety';
+import { MAX_BUDDIES, myBuddies } from '@/lib/buddies';
 import { supabase } from '@/lib/supabase';
 
 export default function MeScreen() {
   const myId = useUserId();
   const { data, error } = useLoad(() =>
-    Promise.all([getProfile(myId), getCorner(myId), myStatus(), myDecisions()]),
+    Promise.all([getProfile(myId), getCorner(myId), myStatus(), myDecisions(), myBuddies()]),
   );
   const [deleting, setDeleting] = useState(false);
   const [showName, setShowName] = useShowNameOnReact();
-  const [profile, corner, status, decisions] = data ?? [null, [], null, []];
+  const [profile, corner, status, decisions, buddies] = data ?? [null, [], null, [], []];
   const suspended = status?.suspended_until && new Date(status.suspended_until) > new Date();
 
   async function onDelete() {
@@ -85,6 +87,24 @@ export default function MeScreen() {
 
       <Card>
         <ThemedText type="smallBold">
+          Your buddies · {buddies.length}/{MAX_BUDDIES}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          Your closest people. They can be notified when you post, and they&apos;re told if you might
+          need extra support. Add a buddy from their profile.
+        </ThemedText>
+        {buddies.map((b) => (
+          <PersonRow
+            key={b.id}
+            displayName={b.display_name}
+            username={b.username}
+            onPress={() => router.push(`/user/${b.username}`)}
+          />
+        ))}
+      </Card>
+
+      <Card>
+        <ThemedText type="smallBold">
           Your Corner · {corner.length} {corner.length === 1 ? 'person' : 'people'}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
@@ -118,7 +138,10 @@ export default function MeScreen() {
       ) : null}
       <Button label="Your posts" variant="secondary" onPress={() => router.push('/my-posts')} />
       <Button label="Blocked people" variant="secondary" onPress={() => router.push('/blocked')} />
-      <Button label="Sign out" variant="secondary" onPress={() => supabase.auth.signOut()} />
+      <Button label="Sign out" variant="secondary" onPress={async () => {
+          await unregisterForPush().catch(() => {});
+          await supabase.auth.signOut();
+        }} />
       <Button label="Delete account" variant="danger" busy={deleting} onPress={onDelete} />
     </Screen>
   );

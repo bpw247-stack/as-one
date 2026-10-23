@@ -47,7 +47,25 @@ it, so **nothing can be posted until this step is done.**
    Appeals have to be decided by a different moderator than the one who made the decision, so
    you'll want a second moderator before launch.
 
-### 3. Connect the app
+### 3. Turn on push notifications (one time)
+
+Notifications are queued in the database and sent by the `send-notifications` function, which
+needs to run every minute.
+
+```bash
+npx supabase functions deploy send-notifications --no-verify-jwt
+npx supabase secrets set CRON_SECRET=<any long random string>
+```
+
+Then in the Supabase dashboard, open **Integrations → Cron → Create job**: run every minute
+(`* * * * *`), type **Supabase Edge Function**, function `send-notifications`, method POST, and
+add the header `x-cron-secret` with the same random string.
+
+Push needs an Expo project id: run `npx eas-cli@latest init` once (it adds
+`extra.eas.projectId` to `app.json`). On Android, push needs a development build rather than
+Expo Go (`npx eas-cli@latest build --profile development`).
+
+### 4. Connect the app
 
 ```bash
 cp .env.example .env   # then paste your URL and key into .env
@@ -72,7 +90,7 @@ node --test tests/*.test.mjs      # app logic and the screening module
 - [x] **Phase 2** — posting & feeds (Corner tab, Everyone tab, anonymous posts)
 - [x] **Phase 3** — reactions, comments, goal follow-ups, Activity
 - [x] **Phase 4** — safety: AI screening, crisis mode, reports, penalties, appeals
-- [ ] Phase 5 — buddies & notifications
+- [x] **Phase 5** — buddies & push notifications (including the next-day check-in)
 - [ ] Phase 6 — photos
 - [ ] Phase 7 — song posts
 - [ ] Phase 8 — beta → App Store
