@@ -205,7 +205,11 @@ No one else sees that a post was flagged.
 - The author's identity is **never sent to any device** with an anonymous post (not even hidden in API data).
 - No username, avatar or profile link on anonymous posts.
 - Anonymous posts are published after a **small random delay**.
-- Corner members see them at random positions, unlabeled.
+- Corner members see them at random positions, unlabeled. Concretely: on the first page of
+  the main tab, any unseen anonymous post from your Corner (last 14 days) is mixed in at a
+  random spot, alongside at least as many unseen anonymous posts from outside your Corner
+  ("decoys"), so a resurfaced post never points to your Corner. Each is delivered once.
+- Times on other people's anonymous posts are rounded to the hour.
 - Blocked users never see them; this doesn't leak authorship because the main feed is large and unordered by author.
 - The author privately sees reactions (and usernames of reactors who opted in).
 

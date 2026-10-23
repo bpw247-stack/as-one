@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "As One",
+    "slug": "as-one",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "asone",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "app.asone.mobile",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "app.asone.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#C8553D",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#C8553D",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#C8553D"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "As One lets you add photos to posts you share with your Corner.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
