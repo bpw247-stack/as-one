@@ -36,7 +36,7 @@ function RootNavigator() {
   const signedIn = session !== null;
   return (
     <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
-      <Stack.Protected guard={signedIn}>
+      <Stack.Protected guard={signedIn} redirectTo="/sign-in">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="search" options={{ title: 'Find people' }} />
         <Stack.Screen name="user/[username]" options={{ title: '' }} />
@@ -54,6 +54,7 @@ function RootNavigator() {
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="sign-up" options={{ title: 'Join As One' }} />
       </Stack.Protected>
+      <Stack.Screen name="about" options={{ title: 'Guidelines', presentation: 'modal' }} />
     </Stack>
   );
 }

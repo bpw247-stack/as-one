@@ -1,4 +1,6 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
+import { Pressable } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Field, Screen } from '@/components/ui';
@@ -101,6 +103,12 @@ export default function SignUpScreen() {
         autoComplete="new-password"
         hint="At least 8 characters."
       />
+      <Pressable accessibilityRole="link" onPress={() => router.push('/about')}>
+        <ThemedText type="small" themeColor="textSecondary">
+          By creating an account you agree to the Community Guidelines, Terms of Use and Privacy
+          Policy. <ThemedText type="small" themeColor="text">Read them</ThemedText>
+        </ThemedText>
+      </Pressable>
       <ErrorText message={error} />
       <Button
         label="Create account"

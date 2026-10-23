@@ -9,7 +9,18 @@ A social app for sharing struggles, goals, milestones and life events in a space
 
 *"As One" — nobody supports alone.*
 
-See [docs/SPEC.md](docs/SPEC.md) for the full product spec.
+- [docs/SPEC.md](docs/SPEC.md) — the full product spec
+- [docs/LAUNCH.md](docs/LAUNCH.md) — from here to the App Store and Google Play
+- [docs/COMMUNITY_GUIDELINES.md](docs/COMMUNITY_GUIDELINES.md), [docs/PRIVACY.md](docs/PRIVACY.md), [docs/TERMS.md](docs/TERMS.md) — drafts for legal review
+
+## How it's built
+
+- **App:** Expo (React Native) with Expo Router — one codebase for iOS, Android and web.
+- **Backend:** Supabase. Every privacy rule (who sees what, anonymity, blocks, the Corner
+  guarantee) is enforced in Postgres, in [`supabase/migrations/`](supabase/migrations).
+- **Edge functions** ([`supabase/functions/`](supabase/functions)): `screen` checks every post,
+  comment, profile edit and photo with Claude before publishing it; `send-notifications` delivers
+  push notifications through Expo; `songs` searches Apple's music catalog.
 
 ## Running it
 
@@ -94,4 +105,6 @@ node --test tests/*.test.mjs      # app logic and the screening module
 - [x] **Phase 5** — buddies & push notifications (including the next-day check-in)
 - [x] **Phase 6** — photos on Corner posts (screened, location data stripped)
 - [x] **Phase 7** — song posts (Apple catalog metadata; no audio or lyrics)
-- [ ] Phase 8 — beta → App Store
+- [x] **Phase 8** — launch prep: app icon, store config, legal drafts, [launch checklist](docs/LAUNCH.md)
+
+What's left needs your accounts and decisions — see [docs/LAUNCH.md](docs/LAUNCH.md).

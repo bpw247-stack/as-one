@@ -138,6 +138,7 @@ export default function MeScreen() {
       ) : null}
       <Button label="Your posts" variant="secondary" onPress={() => router.push('/my-posts')} />
       <Button label="Blocked people" variant="secondary" onPress={() => router.push('/blocked')} />
+      <Button label="Guidelines, terms & privacy" variant="secondary" onPress={() => router.push('/about')} />
       <Button label="Sign out" variant="secondary" onPress={async () => {
           await unregisterForPush().catch(() => {});
           await supabase.auth.signOut();

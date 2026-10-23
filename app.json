@@ -8,11 +8,16 @@
     "scheme": "asone",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "app.asone.mobile",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "app.asone.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#C8553D",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -28,11 +33,27 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#C8553D",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 120
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#C8553D"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "As One lets you add photos to posts you share with your Corner.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
