@@ -5,20 +5,11 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
 
-import { adult, as, connect, db, setupDb, signUp } from './helpers.mjs';
+import { adult, as, connect, db, publishPost, setupDb, signUp } from './helpers.mjs';
 
 before(setupDb);
 
-async function post(userId, { kind = 'struggle', body = 'hello', anonymous = false, corner = true, everyone = false } = {}) {
-  const [{ create_post: id }] = await as(userId, 'select create_post($1, $2, $3, $4, $5)', [
-    kind,
-    body,
-    anonymous,
-    corner,
-    everyone,
-  ]);
-  return id;
-}
+const post = publishPost;
 
 // Anonymous posts wait out a random delay; tests skip it.
 async function publishNow(postId, minutesAgo = 0) {
@@ -49,10 +40,11 @@ describe('creating posts', () => {
     await assert.rejects(post(a, { body: 'x'.repeat(2001) }));
   });
 
-  test('nobody can read or write the posts table directly', async () => {
+  test('nobody can read or write the posts table directly, or skip screening', async () => {
     const a = await signUp(adult('direct_access'));
     await post(a);
     await assert.rejects(as(a, 'select * from posts'));
+    await assert.rejects(as(a, `select create_post($1, 'goal', 'x', false, true, false)`, [a]));
     await assert.rejects(
       as(a, `insert into posts (author_id, kind, body, to_corner, to_everyone) values ($1, 'goal', 'x', true, false)`, [a]),
     );

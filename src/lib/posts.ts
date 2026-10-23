@@ -28,6 +28,8 @@ export type FeedPost = {
   comments_private: boolean;
   follow_up_of: string | null;
   follow_up_excerpt: string | null;
+  /** Possible crisis: reactions only, with their own set. */
+  is_crisis: boolean;
 };
 
 export type Comment = {
@@ -69,7 +71,7 @@ export const POST_KINDS: { kind: PostKind; label: string; prompt: string }[] = [
 ];
 
 /** The preset reactions for each kind of post (must match the database). */
-export const REACTIONS: Record<PostKind, { key: string; label: string }[]> = {
+export const REACTIONS: Record<PostKind | 'crisis', { key: string; label: string }[]> = {
   struggle: [
     { key: 'support', label: 'I support you' },
     { key: 'not_alone', label: "You're not alone" },
@@ -86,6 +88,12 @@ export const REACTIONS: Record<PostKind, { key: string; label: string }[]> = {
   life_event: [
     { key: 'happy_for_you', label: 'Happy for you' },
     { key: 'thinking_of_you', label: 'Thinking of you' },
+  ],
+  crisis: [
+    { key: 'not_alone', label: 'You are not alone' },
+    { key: 'life_matters', label: 'Your life matters' },
+    { key: 'here_for_you', label: "We're here for you" },
+    { key: 'strength', label: 'Sending you strength' },
   ],
 };
 
@@ -119,25 +127,6 @@ function check<T>({ data, error }: { data: T | null; error: { message: string } 
   return data as T;
 }
 
-export async function createPost(
-  kind: PostKind,
-  body: string,
-  audience: Audience,
-  options: { commentsPrivate?: boolean; followUpOf?: string } = {},
-): Promise<string> {
-  return check(
-    await supabase.rpc('create_post', {
-      kind,
-      body,
-      anonymous: audience === 'anonymous',
-      to_corner: audience === 'corner' || audience === 'both',
-      to_everyone: audience !== 'corner',
-      comments_private: options.commentsPrivate ?? false,
-      follow_up_of: options.followUpOf ?? null,
-    }),
-  );
-}
-
 export async function getPost(postId: string): Promise<FeedPost | null> {
   const rows: FeedPost[] = check(await supabase.rpc('get_post', { post_id: postId })) ?? [];
   return rows[0] ?? null;
@@ -162,10 +151,6 @@ export async function postReactions(postId: string): Promise<ReactionEntry[]> {
 
 export async function postComments(postId: string): Promise<Comment[]> {
   return check(await supabase.rpc('post_comments', { post_id: postId })) ?? [];
-}
-
-export async function addComment(postId: string, body: string, replyTo?: string) {
-  check(await supabase.rpc('add_comment', { post_id: postId, body, reply_to: replyTo ?? null }));
 }
 
 export async function deleteComment(commentId: string) {

@@ -43,6 +43,10 @@ function RootNavigator() {
         <Stack.Screen name="compose" options={{ title: 'Share', presentation: 'modal' }} />
         <Stack.Screen name="my-posts" options={{ title: 'Your posts' }} />
         <Stack.Screen name="post/[id]" options={{ title: 'Post' }} />
+        <Stack.Screen name="support" options={{ title: 'Get support', presentation: 'modal' }} />
+        <Stack.Screen name="report" options={{ title: 'Report', presentation: 'modal' }} />
+        <Stack.Screen name="appeal" options={{ title: 'Appeal' }} />
+        <Stack.Screen name="moderate" options={{ title: 'Review' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

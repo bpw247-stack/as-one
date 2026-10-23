@@ -154,7 +154,16 @@ export default function UserScreen() {
       )}
 
       {relationship !== 'self' ? (
-        <Button label="Block" variant="danger" disabled={busy} onPress={onBlock} />
+        <>
+          <Button
+            label="Report"
+            variant="secondary"
+            onPress={() =>
+              router.push({ pathname: '/report', params: { type: 'profile', id: profile.id } })
+            }
+          />
+          <Button label="Block" variant="danger" disabled={busy} onPress={onBlock} />
+        </>
       ) : null}
     </Screen>
   );

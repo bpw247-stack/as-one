@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
 
-import { adult, as, db, setupDb, signUp } from './helpers.mjs';
+import { adult, as, asServer, db, setupDb, signUp } from './helpers.mjs';
 
 before(setupDb);
 
@@ -38,17 +38,13 @@ describe('signup', () => {
 });
 
 describe('profiles', () => {
-  test('owners can edit display name and bio, but not username or anyone else', async () => {
+  test('profile edits only go through the server (so they are screened)', async () => {
     const a = await signUp(adult('editor'));
-    const b = await signUp(adult('bystander'));
-    await as(a, `update profiles set display_name = 'New', bio = 'hi' where id = $1`, [a]);
+    await assert.rejects(as(a, `update profiles set display_name = 'New' where id = $1`, [a]));
+    await assert.rejects(as(a, `select update_profile($1, 'New', 'hi')`, [a]));
+    await asServer(`select update_profile($1, 'New', 'hi')`, [a]);
     const [row] = await as(a, 'select display_name, bio from profiles where id = $1', [a]);
     assert.deepEqual(row, { display_name: 'New', bio: 'hi' });
-
-    await assert.rejects(as(a, `update profiles set username = 'stolen' where id = $1`, [a]));
-    await as(a, `update profiles set bio = 'hacked' where id = $1`, [b]);
-    const [other] = await as(b, 'select bio from profiles where id = $1', [b]);
-    assert.equal(other.bio, '');
   });
 });
 

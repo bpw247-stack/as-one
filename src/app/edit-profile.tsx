@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 
 import { Button, ErrorText, Field, Screen } from '@/components/ui';
 import { useUserId } from '@/lib/auth';
-import { getProfile, updateProfile } from '@/lib/corner';
+import { getProfile } from '@/lib/corner';
+import { problemWith, publishProfile } from '@/lib/publish';
 
 export default function EditProfileScreen() {
   const myId = useUserId();
@@ -27,7 +28,13 @@ export default function EditProfileScreen() {
     setBusy(true);
     setError(null);
     try {
-      await updateProfile(myId, { display_name: displayName.trim(), bio: bio.trim() });
+      const result = await publishProfile(displayName.trim(), bio.trim());
+      const problem = problemWith(result);
+      if (problem) {
+        setError(problem);
+        setBusy(false);
+        return;
+      }
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

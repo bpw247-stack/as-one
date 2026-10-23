@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
+import { CrisisInterstitial } from '@/components/crisis-support';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Field, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -9,12 +10,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { notify } from '@/lib/confirm';
 import {
   AUDIENCES,
-  createPost,
   MAX_POST_LENGTH,
   POST_KINDS,
   type Audience,
   type PostKind,
 } from '@/lib/posts';
+import { problemWith, publishPost } from '@/lib/publish';
 
 export default function ComposeScreen() {
   const params = useLocalSearchParams<{
@@ -31,6 +32,8 @@ export default function ComposeScreen() {
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Set when screening thinks this might be a crisis: the helpline comes first.
+  const [crisisHold, setCrisisHold] = useState(false);
 
   const prompt = followUpOf
     ? kind === 'milestone'
@@ -45,11 +48,31 @@ export default function ComposeScreen() {
     : POST_KINDS.map((k) => ({ value: k.kind, label: k.label }));
   const audienceInfo = AUDIENCES.find((a) => a.audience === audience)!;
 
-  async function share() {
+  async function share(crisisAcknowledged = false) {
     setBusy(true);
     setError(null);
     try {
-      await createPost(kind, body.trim(), audience, { commentsPrivate, followUpOf });
+      const result = await publishPost(kind, body.trim(), audience, {
+        commentsPrivate,
+        followUpOf,
+        crisisAcknowledged,
+      });
+      if (result.status === 'crisis') {
+        setCrisisHold(true);
+        setBusy(false);
+        return;
+      }
+      const problem = problemWith(result);
+      if (problem) {
+        setCrisisHold(false);
+        setError(problem);
+        setBusy(false);
+        return;
+      }
+      if (crisisAcknowledged) {
+        router.replace('/support');
+        return;
+      }
       if (audience === 'anonymous' && !followUpOf) {
         notify('Posted anonymously', 'It will appear in the Everyone feed in a few minutes.');
       }
@@ -58,6 +81,14 @@ export default function ComposeScreen() {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
     }
+  }
+
+  if (crisisHold) {
+    return (
+      <Screen>
+        <CrisisInterstitial busy={busy} onContinue={() => share(true)} onBack={() => setCrisisHold(false)} />
+      </Screen>
+    );
   }
 
   return (
@@ -116,7 +147,7 @@ export default function ComposeScreen() {
       )}
 
       <ErrorText message={error} />
-      <Button label="Share" onPress={share} busy={busy} disabled={!body.trim()} />
+      <Button label="Share" onPress={() => share()} busy={busy} disabled={!body.trim()} />
     </Screen>
   );
 }

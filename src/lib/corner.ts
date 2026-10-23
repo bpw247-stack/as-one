@@ -54,10 +54,6 @@ export async function searchProfiles(query: string, myId: string): Promise<Profi
   );
 }
 
-export async function updateProfile(id: string, fields: { display_name: string; bio: string }) {
-  check(await supabase.from('profiles').update(fields).eq('id', id));
-}
-
 export async function getRelationship(myId: string, otherId: string): Promise<Relationship> {
   if (myId === otherId) return 'self';
   const [a, b] = [myId, otherId].sort();

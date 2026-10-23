@@ -1,27 +1,20 @@
-import { router } from "expo-router";
-import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from "@/components/themed-text";
-import { Card } from "@/components/ui";
-import { Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
-import { confirm, notify } from "@/lib/confirm";
-import {
-  deletePost,
-  KIND_LABELS,
-  react,
-  REACTIONS,
-  unreact,
-  type FeedPost,
-} from "@/lib/posts";
-import { useShowNameOnReact } from "@/lib/preferences";
-import { anonymousTimeAgo, isPending, timeAgo } from "@/lib/time";
+import { ThemedText } from '@/components/themed-text';
+import { Card } from '@/components/ui';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { confirm, notify } from '@/lib/confirm';
+import { deletePost, KIND_LABELS, react, REACTIONS, unreact, type FeedPost } from '@/lib/posts';
+import { useShowNameOnReact } from '@/lib/preferences';
+import { anonymousTimeAgo, isPending, timeAgo } from '@/lib/time';
 
 function audienceLabel(post: FeedPost) {
-  if (post.is_anonymous) return "Anonymous";
-  if (post.to_corner && post.to_everyone) return "Corner + Everyone";
-  return post.to_corner ? "Corner" : "Everyone";
+  if (post.is_anonymous) return 'Anonymous';
+  if (post.to_corner && post.to_everyone) return 'Corner + Everyone';
+  return post.to_corner ? 'Corner' : 'Everyone';
 }
 
 /**
@@ -45,20 +38,13 @@ export function PostCard({
       : timeAgo(post.published_at);
 
   async function onDelete() {
-    const ok = await confirm(
-      "Delete this post?",
-      "It will be removed for everyone.",
-      "Delete",
-    );
+    const ok = await confirm('Delete this post?', 'It will be removed for everyone.', 'Delete');
     if (!ok) return;
     try {
       await deletePost(post.id);
       onDeleted?.(post.id);
     } catch (e) {
-      notify(
-        "Could not delete the post",
-        e instanceof Error ? e.message : undefined,
-      );
+      notify('Could not delete the post', e instanceof Error ? e.message : undefined);
     }
   }
 
@@ -72,21 +58,19 @@ export function PostCard({
             {KIND_LABELS[post.kind]}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            · {pending ? "Posting in a few minutes" : when}
-            {post.is_mine ? ` · ${audienceLabel(post)}` : ""}
+            · {pending ? 'Posting in a few minutes' : when}
+            {post.is_mine ? ` · ${audienceLabel(post)}` : ''}
           </ThemedText>
         </View>
 
         {post.is_anonymous ? (
           <ThemedText type="smallBold">
-            {post.is_mine ? "You, anonymously" : "Anonymous"}
+            {post.is_mine ? 'You, anonymously' : 'Anonymous'}
           </ThemedText>
         ) : (
-          <Pressable
-            onPress={() => router.push(`/user/${post.author_username}`)}
-          >
+          <Pressable onPress={() => router.push(`/user/${post.author_username}`)}>
             <ThemedText type="smallBold">
-              {post.author_display_name}{" "}
+              {post.author_display_name}{' '}
               <ThemedText type="small" themeColor="textSecondary">
                 @{post.author_username}
               </ThemedText>
@@ -109,20 +93,41 @@ export function PostCard({
         ) : null}
       </Pressable>
 
+      {post.is_mine && post.is_crisis ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/support')}>
+          <ThemedText type="smallBold" style={{ color: theme.accent }}>
+            Talk to someone now — free and confidential
+          </ThemedText>
+        </Pressable>
+      ) : null}
+
       {post.is_mine ? (
         <OwnPostFooter post={post} onDelete={onDelete} />
       ) : (
         <ReactionBar post={post} />
       )}
 
-      {!post.is_mine && (post.comment_count > 0 || post.can_comment) && open ? (
-        <Pressable onPress={open} accessibilityRole="button">
-          <ThemedText type="small" themeColor="textSecondary">
-            {post.comment_count > 0
-              ? `${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}`
-              : "Write a comment"}
-          </ThemedText>
-        </Pressable>
+      {!post.is_mine ? (
+        <View style={styles.otherFooter}>
+          {(post.comment_count > 0 || post.can_comment) && open ? (
+            <Pressable onPress={open} accessibilityRole="button" style={styles.flex}>
+              <ThemedText type="small" themeColor="textSecondary">
+                {post.comment_count > 0
+                  ? `${post.comment_count} ${post.comment_count === 1 ? 'comment' : 'comments'}`
+                  : 'Write a comment'}
+              </ThemedText>
+            </Pressable>
+          ) : (
+            <View style={styles.flex} />
+          )}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/report', params: { type: 'post', id: post.id } })}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Report
+            </ThemedText>
+          </Pressable>
+        </View>
       ) : null}
     </Card>
   );
@@ -145,13 +150,13 @@ function ReactionBar({ post }: { post: FeedPost }) {
       else await react(post.id, key, showName);
     } catch (e) {
       setMine(mine);
-      notify("Could not send that", e instanceof Error ? e.message : undefined);
+      notify('Could not send that', e instanceof Error ? e.message : undefined);
     }
   }
 
   return (
     <View style={styles.reactions}>
-      {REACTIONS[post.kind].map((r) => {
+      {REACTIONS[post.is_crisis ? 'crisis' : post.kind].map((r) => {
         const active = mine.has(r.key);
         return (
           <Pressable
@@ -165,12 +170,8 @@ function ReactionBar({ post }: { post: FeedPost }) {
                 backgroundColor: active ? theme.accent : theme.background,
                 borderColor: active ? theme.accent : theme.border,
               },
-            ]}
-          >
-            <ThemedText
-              type="small"
-              style={{ color: active ? theme.onAccent : theme.text }}
-            >
+            ]}>
+            <ThemedText type="small" style={{ color: active ? theme.onAccent : theme.text }}>
               {r.label}
             </ThemedText>
           </Pressable>
@@ -180,40 +181,33 @@ function ReactionBar({ post }: { post: FeedPost }) {
   );
 }
 
-function OwnPostFooter({
-  post,
-  onDelete,
-}: {
-  post: FeedPost;
-  onDelete: () => void;
-}) {
+function OwnPostFooter({ post, onDelete }: { post: FeedPost; onDelete: () => void }) {
   const theme = useTheme();
   const reactions = post.reaction_count ?? 0;
   return (
     <View style={styles.ownFooter}>
       <Pressable onPress={() => router.push(`/post/${post.id}`)}>
         <ThemedText type="small" themeColor="textSecondary">
-          {reactions} {reactions === 1 ? "reaction" : "reactions"}
+          {reactions} {reactions === 1 ? 'reaction' : 'reactions'}
           {post.is_anonymous
-            ? ""
-            : ` · ${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}`}
-          {" · only you see this"}
+            ? ''
+            : ` · ${post.comment_count} ${post.comment_count === 1 ? 'comment' : 'comments'}`}
+          {' · only you see this'}
         </ThemedText>
       </Pressable>
       <View style={styles.ownActions}>
-        {post.kind === "goal" ? (
+        {post.kind === 'goal' ? (
           <Pressable
             accessibilityRole="button"
             onPress={() =>
               router.push({
-                pathname: "/compose",
+                pathname: '/compose',
                 params: {
                   followUpOf: post.id,
                   followUpExcerpt: post.body.slice(0, 120),
                 },
               })
-            }
-          >
+            }>
             <ThemedText type="small" style={{ color: theme.accent }}>
               Post a follow-up
             </ThemedText>
@@ -232,23 +226,25 @@ function OwnPostFooter({
 const styles = StyleSheet.create({
   body: { gap: Spacing.two },
   meta: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.one,
-    alignItems: "center",
+    alignItems: 'center',
   },
-  reactions: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
+  reactions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   reaction: {
     minHeight: 36,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     borderRadius: Spacing.four,
     borderWidth: 1,
   },
   ownFooter: { gap: Spacing.two },
+  otherFooter: { flexDirection: 'row', alignItems: 'center' },
+  flex: { flex: 1 },
   ownActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     gap: Spacing.four,
   },
 });

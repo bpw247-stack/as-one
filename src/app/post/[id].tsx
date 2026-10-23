@@ -10,7 +10,6 @@ import { useLoad } from '@/hooks/use-load';
 import { useTheme } from '@/hooks/use-theme';
 import { confirm, notify } from '@/lib/confirm';
 import {
-  addComment,
   deleteComment,
   getPost,
   MAX_COMMENT_LENGTH,
@@ -22,6 +21,7 @@ import {
   type FeedPost,
   type ReactionEntry,
 } from '@/lib/posts';
+import { problemWith, publishComment } from '@/lib/publish';
 import { timeAgo } from '@/lib/time';
 
 export default function PostScreen() {
@@ -30,7 +30,7 @@ export default function PostScreen() {
     const post = await getPost(id);
     if (!post) return null;
     const [comments, reactions] = await Promise.all([
-      post.is_anonymous ? Promise.resolve([]) : postComments(id),
+      post.is_anonymous || post.is_crisis ? Promise.resolve([]) : postComments(id),
       post.is_mine ? postReactions(id) : Promise.resolve([]),
     ]);
     return { post, comments, reactions };
@@ -53,9 +53,11 @@ export default function PostScreen() {
       <ErrorText message={error} />
       <PostCard post={post} onPostPage onDeleted={() => router.back()} />
       {post.is_mine ? <ReactionSummary reactions={reactions} /> : null}
-      {post.is_anonymous ? (
+      {post.is_anonymous || post.is_crisis ? (
         <ThemedText type="small" themeColor="textSecondary">
-          Anonymous posts can only receive reactions.
+          {post.is_crisis
+            ? 'This post takes reactions only, so every response is a kind one.'
+            : 'Anonymous posts can only receive reactions.'}
         </ThemedText>
       ) : (
         <Comments post={post} comments={comments} onChange={reload} />
@@ -124,10 +126,16 @@ function Comments({
     setBusy(true);
     setError(null);
     try {
-      await addComment(post.id, draft.trim(), replyTo?.id);
+      const result = await publishComment(post.id, draft.trim(), replyTo?.id);
+      const problem = problemWith(result);
+      if (problem) {
+        setError(problem);
+        return;
+      }
       setDraft('');
       setReplyTo(null);
       await onChange();
+      if (result.status === 'ok' && result.support) router.push('/support');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -252,13 +260,26 @@ function CommentRow({
         </ThemedText>
       </ThemedText>
       <ThemedText>{comment.body}</ThemedText>
-      {canDelete ? (
-        <Pressable onPress={onDelete} accessibilityRole="button" style={styles.deleteComment}>
-          <ThemedText type="small" style={{ color: theme.danger }}>
-            Delete
-          </ThemedText>
-        </Pressable>
-      ) : null}
+      <View style={styles.commentActions}>
+        {!comment.is_mine ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({ pathname: '/report', params: { type: 'comment', id: comment.id } })
+            }>
+            <ThemedText type="small" themeColor="textSecondary">
+              Report
+            </ThemedText>
+          </Pressable>
+        ) : null}
+        {canDelete ? (
+          <Pressable onPress={onDelete} accessibilityRole="button">
+            <ThemedText type="small" style={{ color: theme.danger }}>
+              Delete
+            </ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -271,5 +292,5 @@ const styles = StyleSheet.create({
   reply: { marginLeft: Spacing.three, paddingLeft: Spacing.three, borderLeftWidth: 2 },
   reactorList: { gap: Spacing.one, marginTop: Spacing.two },
   commentRow: { gap: Spacing.one },
-  deleteComment: { alignSelf: 'flex-end' },
+  commentActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.three },
 });

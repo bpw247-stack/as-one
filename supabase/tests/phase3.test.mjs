@@ -5,22 +5,19 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
 
-import { adult, as, connect, db, setupDb, signUp } from './helpers.mjs';
+import { adult, as, connect, db, publishComment, publishPost, setupDb, signUp } from './helpers.mjs';
 
 before(setupDb);
 
 async function post(userId, { kind = 'struggle', body = 'hello', anonymous = false, corner = true, everyone = false, commentsPrivate = false, followUpOf = null } = {}) {
-  const [{ create_post: id }] = await as(userId, 'select create_post($1, $2, $3, $4, $5, $6, $7)', [
-    kind, body, anonymous, corner, everyone, commentsPrivate, followUpOf,
-  ]);
+  const id = await publishPost(userId, { kind, body, anonymous, corner, everyone, commentsPrivate, followUpOf });
   if (anonymous || followUpOf) await db.query('update posts set published_at = now() where id = $1', [id]);
   return id;
 }
 
 const react = (u, postId, reaction, showName = true) =>
   as(u, 'select react($1, $2, $3)', [postId, reaction, showName]);
-const comment = (u, postId, body, replyTo = null) =>
-  as(u, 'select add_comment($1, $2, $3) as id', [postId, body, replyTo]).then(([r]) => r.id);
+const comment = publishComment;
 const comments = (u, postId) => as(u, 'select * from post_comments($1)', [postId]);
 const getPost = (u, postId) => as(u, 'select * from get_post($1)', [postId]).then(([r]) => r);
 

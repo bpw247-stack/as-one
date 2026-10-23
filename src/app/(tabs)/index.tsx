@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 
 import { Feed } from '@/components/feed';
 import { SharePrompt } from '@/components/share-prompt';
+import { SupportBanner } from '@/components/support-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Button, EmptyState } from '@/components/ui';
 import { cornerFeed } from '@/lib/posts';
@@ -14,6 +15,7 @@ export default function CornerFeedScreen() {
       header={
         <>
           <ThemedText type="subtitle">Your Corner</ThemedText>
+          <SupportBanner />
           <SharePrompt audience="corner" />
         </>
       }

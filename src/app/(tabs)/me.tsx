@@ -9,14 +9,18 @@ import { useUserId } from '@/lib/auth';
 import { confirm, notify } from '@/lib/confirm';
 import { deleteAccount, getCorner, getProfile } from '@/lib/corner';
 import { useShowNameOnReact } from '@/lib/preferences';
+import { DECISION_LABELS, myDecisions, myStatus } from '@/lib/safety';
 import { supabase } from '@/lib/supabase';
 
 export default function MeScreen() {
   const myId = useUserId();
-  const { data, error } = useLoad(() => Promise.all([getProfile(myId), getCorner(myId)]));
+  const { data, error } = useLoad(() =>
+    Promise.all([getProfile(myId), getCorner(myId), myStatus(), myDecisions()]),
+  );
   const [deleting, setDeleting] = useState(false);
   const [showName, setShowName] = useShowNameOnReact();
-  const [profile, corner] = data ?? [null, []];
+  const [profile, corner, status, decisions] = data ?? [null, [], null, []];
+  const suspended = status?.suspended_until && new Date(status.suspended_until) > new Date();
 
   async function onDelete() {
     const ok = await confirm(
@@ -37,6 +41,39 @@ export default function MeScreen() {
   return (
     <Screen withTabBar>
       <ErrorText message={error} />
+      <Button label="Get support" variant="secondary" onPress={() => router.push('/support')} />
+
+      {status?.banned || suspended || status?.comment_paused ? (
+        <Card>
+          <ThemedText type="smallBold">Your account</ThemedText>
+          <ThemedText type="small">
+            {status?.banned
+              ? 'Your account has been permanently banned for breaking As One’s rules.'
+              : suspended
+                ? `Your account is suspended until ${new Date(status!.suspended_until!).toLocaleDateString()}. You can still read, but not post, comment or react.`
+                : 'Your ability to comment is paused while we review recent activity. You can still post and react.'}
+          </ThemedText>
+        </Card>
+      ) : null}
+
+      {decisions.map((d) => (
+        <Card key={d.report_id}>
+          <ThemedText type="smallBold">A decision about your {d.target_type}</ThemedText>
+          <ThemedText type="small">{DECISION_LABELS[d.decision] ?? d.decision}</ThemedText>
+          {d.appeal_status ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Appeal {d.appeal_status === 'open' ? 'under review' : d.appeal_status}
+            </ThemedText>
+          ) : (
+            <Button
+              label="Appeal"
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/appeal', params: { reportId: d.report_id } })}
+            />
+          )}
+        </Card>
+      ))}
+
       {profile ? (
         <Card>
           <ThemedText type="subtitle">{profile.display_name}</ThemedText>
@@ -76,6 +113,9 @@ export default function MeScreen() {
         </View>
       </Card>
 
+      {status?.is_moderator ? (
+        <Button label="Review reports" variant="secondary" onPress={() => router.push('/moderate')} />
+      ) : null}
       <Button label="Your posts" variant="secondary" onPress={() => router.push('/my-posts')} />
       <Button label="Blocked people" variant="secondary" onPress={() => router.push('/blocked')} />
       <Button label="Sign out" variant="secondary" onPress={() => supabase.auth.signOut()} />
