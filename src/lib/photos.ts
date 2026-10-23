@@ -5,7 +5,7 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
-import { supabase } from '@/lib/supabase';
+import { isDemo, supabase } from '@/lib/supabase';
 
 export const MAX_PHOTOS = 4;
 const BUCKET = 'post-photos';
@@ -32,7 +32,8 @@ async function toJpeg(uri: string): Promise<string> {
 /** Uploads a local JPEG to my pending folder and returns its storage path. */
 export async function uploadPending(userId: string, uri: string): Promise<string> {
   const path = `pending/${userId}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}.jpg`;
-  const bytes = await (await fetch(uri)).arrayBuffer();
+  // The demo keeps photos in the browser, so it stores the local URI as-is.
+  const bytes = isDemo ? uri : await (await fetch(uri)).arrayBuffer();
   const { error } = await supabase.storage.from(BUCKET).upload(path, bytes, { contentType: 'image/jpeg' });
   if (error) throw new Error(error.message);
   return path;

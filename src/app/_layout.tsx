@@ -1,13 +1,17 @@
+import '@/lib/demo/web-shell';
+
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { StyleSheet, useColorScheme, View } from 'react-native';
 
+import { DialogHost } from '@/components/dialog-host';
 import { ThemedText } from '@/components/themed-text';
 import { Card, Screen } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { usePushNotifications } from '@/lib/notifications';
-import { isConfigured } from '@/lib/supabase';
+import { Colors } from '@/constants/theme';
+import { isConfigured, isDemo } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,7 +20,13 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <RootNavigator />
+        <View style={styles.fill}>
+          {isDemo ? <DemoBanner /> : null}
+          <View style={styles.fill}>
+            <RootNavigator />
+          </View>
+        </View>
+        <DialogHost />
       </AuthProvider>
     </ThemeProvider>
   );
@@ -71,3 +81,20 @@ function SetupNeeded() {
     </Screen>
   );
 }
+
+function DemoBanner() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  return (
+    <View style={[styles.banner, { backgroundColor: colors.accent }]}>
+      <ThemedText type="small" style={{ color: colors.onAccent }}>
+        Demo with sample people. Nothing is saved, and screening is simulated.
+      </ThemedText>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  banner: { paddingVertical: 6, paddingHorizontal: 16, alignItems: 'center' },
+});

@@ -22,6 +22,13 @@ A social app for sharing struggles, goals, milestones and life events in a space
   comment, profile edit and photo with Claude before publishing it; `send-notifications` delivers
   push notifications through Expo; `songs` searches Apple's music catalog.
 
+## Try the demo
+
+`npm run demo:page` builds a single web page (`dist-demo/as-one-demo.html`) that runs the whole
+app on sample people and posts, with no server: the backend is simulated in the browser
+(`src/lib/demo/`), screening uses a short word list instead of Claude, and nothing is saved.
+Set `EXPO_PUBLIC_DEMO=1` to run the same demo with `npx expo start`.
+
 ## Running it
 
 ### 1. Set up the database (one time)
