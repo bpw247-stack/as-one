@@ -1,0 +1,68 @@
+// Test harness: runs every migration against an in-memory Postgres (PGlite)
+// with a minimal stand-in for Supabase's auth schema and roles.
+
+import { PGlite } from '@electric-sql/pglite';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const MIGRATIONS = join(import.meta.dirname, '..', 'migrations');
+
+const SUPABASE_STUB = `
+  create role anon nologin;
+  create role authenticated nologin;
+  create schema auth;
+  create table auth.users (
+    id uuid primary key default gen_random_uuid(),
+    raw_user_meta_data jsonb
+  );
+  create function auth.uid() returns uuid language sql stable as $$
+    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  $$;
+  grant usage on schema public, auth to anon, authenticated;
+  grant execute on function auth.uid() to anon, authenticated;
+  -- Supabase grants table access broadly and relies on RLS; mirror that.
+  alter default privileges in schema public grant all on tables to anon, authenticated;
+`;
+
+export let db;
+
+export async function setupDb() {
+  db = new PGlite();
+  await db.exec(SUPABASE_STUB);
+  for (const file of readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()) {
+    await db.exec(readFileSync(join(MIGRATIONS, file), 'utf8'));
+  }
+}
+
+export async function signUp(meta) {
+  const { rows } = await db.query(
+    'insert into auth.users (raw_user_meta_data) values ($1) returning id',
+    [meta],
+  );
+  return rows[0].id;
+}
+
+export function adult(username) {
+  return { username, display_name: username, birth_date: '1990-01-01' };
+}
+
+// Runs a query as a signed-in user, with RLS and grants applied.
+export async function as(userId, sql, params = []) {
+  await db.query('begin');
+  try {
+    await db.query('set local role authenticated');
+    await db.query(`select set_config('request.jwt.claim.sub', $1, true)`, [userId]);
+    const result = await db.query(sql, params);
+    await db.query('commit');
+    return result.rows;
+  } catch (err) {
+    await db.query('rollback');
+    throw err;
+  }
+}
+
+/** Makes two users mutual Corner members. */
+export async function connect(a, b, bUsername) {
+  await as(a, 'select send_corner_request($1)', [bUsername]);
+  await as(b, 'select respond_corner_request($1, true)', [a]);
+}

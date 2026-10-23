@@ -22,7 +22,7 @@ export default function SignInScreen() {
   }
 
   return (
-    <Screen>
+    <Screen noHeader>
       <View style={styles.hero}>
         <ThemedText type="title">As One</ThemedText>
         <ThemedText themeColor="textSecondary">Nobody supports alone.</ThemedText>

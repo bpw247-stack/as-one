@@ -1,6 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
+import { PostCard } from '@/components/post-card';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, EmptyState, ErrorText, Screen } from '@/components/ui';
 import { useLoad } from '@/hooks/use-load';
@@ -16,6 +17,7 @@ import {
   sendRequest,
   type Relationship,
 } from '@/lib/corner';
+import { profilePosts } from '@/lib/posts';
 
 const STATUS_TEXT: Record<Relationship, string | null> = {
   self: 'This is you.',
@@ -33,7 +35,11 @@ export default function UserScreen() {
   const { data, error, loaded, reload } = useLoad(async () => {
     const profile = await getProfileByUsername(username);
     if (!profile) return null;
-    return { profile, relationship: await getRelationship(myId, profile.id) };
+    const [relationship, posts] = await Promise.all([
+      getRelationship(myId, profile.id),
+      profilePosts(profile.username),
+    ]);
+    return { profile, relationship, posts };
   });
 
   async function act(action: () => Promise<unknown>) {
@@ -60,7 +66,7 @@ export default function UserScreen() {
     );
   }
 
-  const { profile, relationship } = data;
+  const { profile, relationship, posts } = data;
   const status = STATUS_TEXT[relationship];
 
   async function onRemove() {
@@ -138,14 +144,17 @@ export default function UserScreen() {
         ) : null}
       </Card>
 
+      {posts.length ? (
+        posts.map((post) => <PostCard key={post.id} post={post} onDeleted={reload} />)
+      ) : (
+        <EmptyState
+          title="No public posts yet"
+          body="Posts they share with everyone will show up here."
+        />
+      )}
+
       {relationship !== 'self' ? (
-        <>
-          <EmptyState
-            title="No public posts yet"
-            body="Posts they share with everyone will show up here."
-          />
-          <Button label="Block" variant="danger" disabled={busy} onPress={onBlock} />
-        </>
+        <Button label="Block" variant="danger" disabled={busy} onPress={onBlock} />
       ) : null}
     </Screen>
   );

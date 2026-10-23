@@ -1,70 +1,13 @@
-// Runs the migrations against an in-memory Postgres (PGlite) with a minimal
-// stand-in for Supabase's auth schema and roles, then checks the privacy rules
-// as real signed-in users would hit them.
+// Checks the Phase 1 privacy rules as real signed-in users would hit them.
 //
 //   npm run test:db
 
-import { PGlite } from '@electric-sql/pglite';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { before, describe, test } from 'node:test';
 
-const MIGRATIONS = join(import.meta.dirname, '..', 'migrations');
+import { adult, as, db, setupDb, signUp } from './helpers.mjs';
 
-const SUPABASE_STUB = `
-  create role anon nologin;
-  create role authenticated nologin;
-  create schema auth;
-  create table auth.users (
-    id uuid primary key default gen_random_uuid(),
-    raw_user_meta_data jsonb
-  );
-  create function auth.uid() returns uuid language sql stable as $$
-    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-  $$;
-  grant usage on schema public, auth to anon, authenticated;
-  grant execute on function auth.uid() to anon, authenticated;
-  -- Supabase grants table access broadly and relies on RLS; mirror that.
-  alter default privileges in schema public grant all on tables to anon, authenticated;
-`;
-
-let db;
-
-async function signUp(meta) {
-  const { rows } = await db.query(
-    'insert into auth.users (raw_user_meta_data) values ($1) returning id',
-    [meta],
-  );
-  return rows[0].id;
-}
-
-function adult(username) {
-  return { username, display_name: username, birth_date: '1990-01-01' };
-}
-
-// Runs a query as a signed-in user, with RLS and grants applied.
-async function as(userId, sql, params = []) {
-  await db.query('begin');
-  try {
-    await db.query('set local role authenticated');
-    await db.query(`select set_config('request.jwt.claim.sub', $1, true)`, [userId]);
-    const result = await db.query(sql, params);
-    await db.query('commit');
-    return result.rows;
-  } catch (err) {
-    await db.query('rollback');
-    throw err;
-  }
-}
-
-before(async () => {
-  db = new PGlite();
-  await db.exec(SUPABASE_STUB);
-  for (const file of readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()) {
-    await db.exec(readFileSync(join(MIGRATIONS, file), 'utf8'));
-  }
-});
+before(setupDb);
 
 describe('signup', () => {
   test('rejects anyone under 18', async () => {

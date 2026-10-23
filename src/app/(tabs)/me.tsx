@@ -61,6 +61,7 @@ export default function MeScreen() {
         <Button label="Find people" onPress={() => router.push('/search')} />
       </Card>
 
+      <Button label="Your posts" variant="secondary" onPress={() => router.push('/my-posts')} />
       <Button label="Blocked people" variant="secondary" onPress={() => router.push('/blocked')} />
       <Button label="Sign out" variant="secondary" onPress={() => supabase.auth.signOut()} />
       <Button label="Delete account" variant="danger" busy={deleting} onPress={onDelete} />

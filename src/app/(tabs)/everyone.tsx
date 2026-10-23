@@ -1,13 +1,26 @@
-import { EmptyState, Screen } from '@/components/ui';
+import { Feed } from '@/components/feed';
+import { SharePrompt } from '@/components/share-prompt';
+import { ThemedText } from '@/components/themed-text';
+import { EmptyState } from '@/components/ui';
+import { everyoneFeed } from '@/lib/posts';
 
-// Main feed: public named posts and anonymous posts, newest first. Arrives in Phase 2.
 export default function EveryoneFeedScreen() {
   return (
-    <Screen title="Everyone" withTabBar>
-      <EmptyState
-        title="Nothing here yet"
-        body="Public and anonymous posts from everyone on As One will show up here, newest first."
-      />
-    </Screen>
+    <Feed
+      withTabBar
+      loadPage={(page) => everyoneFeed(page)}
+      header={
+        <>
+          <ThemedText type="subtitle">Everyone</ThemedText>
+          <SharePrompt audience="everyone" />
+        </>
+      }
+      empty={
+        <EmptyState
+          title="Nothing here yet"
+          body="Public and anonymous posts from everyone on As One will show up here, newest first."
+        />
+      }
+    />
   );
 }

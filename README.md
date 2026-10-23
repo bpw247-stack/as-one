@@ -16,9 +16,8 @@ See [docs/SPEC.md](docs/SPEC.md) for the full product spec.
 ### 1. Set up the database (one time)
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. In the dashboard, open **SQL Editor**, paste in everything from
-   [`supabase/migrations/20261023000000_phase1_accounts_corner.sql`](supabase/migrations/20261023000000_phase1_accounts_corner.sql),
-   and click **Run**.
+2. In the dashboard, open **SQL Editor** and run each file in
+   [`supabase/migrations/`](supabase/migrations) **in order** (paste it in, click **Run**, then the next one).
 3. Go to **Project Settings → API** and copy the **Project URL** and the **anon public** key.
 
 ### 2. Connect the app
@@ -43,7 +42,7 @@ node --test tests/*.test.mjs      # input validation
 ## Build progress
 
 - [x] **Phase 1** — accounts (18+), profiles, Corner requests, block, account deletion
-- [ ] Phase 2 — posting & feeds
+- [x] **Phase 2** — posting & feeds (Corner tab, Everyone tab, anonymous posts)
 - [ ] Phase 3 — reactions, comments, goal follow-ups
 - [ ] Phase 4 — safety: screening, crisis mode, reports
 - [ ] Phase 5 — buddies & notifications

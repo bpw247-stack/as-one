@@ -15,14 +15,21 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+/**
+ * A scrolling page. Tab screens and header-less screens pad for the status bar
+ * themselves (`withTabBar` / `noHeader`); screens under a header don't need to.
+ */
 export function Screen({
   children,
   title,
   withTabBar = false,
-}: PropsWithChildren<{ title?: string; withTabBar?: boolean }>) {
+  noHeader = false,
+}: PropsWithChildren<{ title?: string; withTabBar?: boolean; noHeader?: boolean }>) {
   return (
     <ThemedView style={styles.fill}>
-      <SafeAreaView style={styles.fill} edges={['top', 'left', 'right']}>
+      <SafeAreaView
+        style={styles.fill}
+        edges={withTabBar || noHeader ? ['top', 'left', 'right'] : ['left', 'right']}>
         <ScrollView
           contentContainerStyle={[
             styles.content,

@@ -40,6 +40,8 @@ function RootNavigator() {
         <Stack.Screen name="user/[username]" options={{ title: '' }} />
         <Stack.Screen name="edit-profile" options={{ title: 'Edit profile' }} />
         <Stack.Screen name="blocked" options={{ title: 'Blocked' }} />
+        <Stack.Screen name="compose" options={{ title: 'Share', presentation: 'modal' }} />
+        <Stack.Screen name="my-posts" options={{ title: 'Your posts' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
@@ -51,7 +53,7 @@ function RootNavigator() {
 
 function SetupNeeded() {
   return (
-    <Screen title="Almost there">
+    <Screen title="Almost there" noHeader>
       <Card>
         <ThemedText>
           As One needs its Supabase keys. Copy .env.example to .env, fill in your project URL and
